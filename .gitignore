@@ -1,0 +1,4 @@
+tsne_results/*
+citation_data/*
+.ipynb_checkpoints/*
+nohup.out
