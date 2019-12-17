@@ -25,7 +25,7 @@ all_docs = set([])
 
 redo_queries = False
 
-do_no_reviews = False
+do_no_reviews = True
 
 no_reviews, created = Query.objects.get_or_create(
     title="No reviews",
@@ -52,13 +52,29 @@ if do_no_reviews:
     no_reviews.save()
 
 if redo_queries:
-
-    for q in queries.order_by('project_id'):
+    for p in pids:
+        q = queries.get(project__id=p)
+        #for q in queries.order_by('project_id'):
         print(f"\n{q.title}")
         print(q.r_count)
         q.doc_set.clear()
+        qs = Query.objects.filter(
+            project=q.project,
+        ).exclude(
+            text="[GENERATED TYPE 1]"
+        )
         if q.project.id == 186:
+            print("all documents!")
             docs = all_docs
+        elif q.project.id == 147:
+            docs = set(Doc.objects.filter(
+                query__in=qs,
+            ).values_list('pk',flat=True))
+        elif q.project.id == 148:
+            docs = set(Doc.objects.filter(
+                query__project=q.project,
+                query__title__icontains="_renew"
+            ).values_list('pk',flat=True))           
         else:
             docs = set(Doc.objects.filter(query__project=q.project).values_list('pk',flat=True))
             all_docs = all_docs | docs
@@ -69,20 +85,20 @@ if redo_queries:
         q.save()
         print(q.r_count)
         
-qids = set(queries.values_list('pk',flat=True)) 
+qids = set(queries.exclude(project__in=[148,147,210]).values_list('pk',flat=True)) 
 qids.add(no_reviews.id)
 queries = Query.objects.filter(pk__in=qids)
 
 
 for method in ["NM","LD"]:
-    for K in [20,40,60,80, 100, 120, 140 ]:
+    for K in [20, 40, 60, 80, 100]:
         for q in queries.order_by('r_count'):
             for alpha in [0.05,0.1]:
                 if method=="LD":
                     alpha = alpha*10
                 model, created = RunStats.objects.get_or_create(
                     method=method,
-                    min_freq=10,
+                    min_freq=15,
                     fancy_tokenization=True,
                     K=K,
                     alpha=alpha,
